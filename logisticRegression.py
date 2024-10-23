@@ -16,59 +16,19 @@ class LogisticRegression(Regression):
         self.verbose = verbose
         self.weights = None
 
-    def _sigmoid(self, z: np.ndarray) -> np.ndarray:
+    def activation(self, z: np.ndarray) -> np.ndarray:
         """
-        Private method to apply the sigmoid function.
+        Activation method to apply the sigmoid function.
         """
         return 1 / (1 + np.exp(-z))
     
-    def fit(self, X: np.ndarray, y: np.ndarray) -> None:
+    def threshold(self, probabilities: np.ndarray) -> np.ndarray:
         """
-        Fit the logistic regression model to the training data.
+        No thresholding for linear regression, return the raw predictions.
         """
-        n_samples, n_features = np.shape(X)
-        X = np.column_stack([np.ones((n_samples)), X])
-        self.weights = np.zeros(n_features + 1)
+        return probabilities
 
-        for step in range(self.max_iter):
-            cur_weight = self.weights
-            z = X.dot(self.weights)
-            f = self._sigmoid(z)
-            err = f - y
-            grad = X.T.dot(err) / n_samples
-
-            if self.l1 > 0:
-                grad += self.l1 * np.sign(self.weights)
-            if self.l2 > 0:
-                grad += 2 * self.l2 * self.weights
-
-            self.weights = self.weights - self.learning_rate * grad
-
-            if self.verbose:
-                logloss = self.log_loss(y, self.predict_proba(X))
-                mse = self.mean_squared_error(y, f)
-                print(f"Iteration {step + 1}/{self.max_iter}, MSE: {mse:.4f}, ",
-                      f"Logloss: {logloss:.4f}")
-
-            if np.linalg.norm(cur_weight - self.weights) <= self.tolerance:
-                break
-
-    def predict(self, X: np.ndarray) -> np.ndarray:
-        """
-        Predict binary labels for the input data.
-        """
-        n_samples = X.shape[0]
-        X = np.column_stack([np.ones((n_samples)), X])
-        probabilities = self.predict_proba(X)
-        return (probabilities >= 0.5).astype(int)
-    
-    def predict_proba(self, X: np.ndarray) -> np.ndarray:
-        """
-        Predict probabilities of the positive class for the input data.
-        """
-        return self._sigmoid(X.dot(self.weights))
-
-    def log_loss(self, y_true: np.ndarray, y_pred_proba: np.ndarray) -> float:
+    def loss(self, y_true: np.ndarray, y_pred_proba: np.ndarray) -> float:
         """
         Compute the log loss (binary cross-entropy) between true labels
         and predicted probabilities.

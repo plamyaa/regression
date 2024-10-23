@@ -17,7 +17,7 @@ class LinearRegression(Regression):
         self.verbose = verbose
         self.weights = None
         self.bias = None
-    
+
     def fit_analytical(self, X: np.ndarray, y: np.ndarray) -> None:
         """
         Fit the model using the analytical solution.
@@ -25,39 +25,21 @@ class LinearRegression(Regression):
         X = np.insert(X, 0, 1, axis=1) # Add bias 
         XT_X_inv = np.linalg.inv(X.T @ X)  
         self.weights = np.linalg.multi_dot([XT_X_inv, X.T, y])
-    
-    def fit(self, X: np.ndarray, y: np.ndarray) -> None:
+
+    def activation(self, z: np.ndarray) -> np.ndarray:
         """
-        Fit the model using gradient descent.
+        Linear activation: return the input as is.
         """
-        n_samples, n_features = X.shape
-        X = np.column_stack([np.ones((n_samples)), X])
-        self.weights = np.zeros(n_features + 1)
+        return z
 
-        for step in range(self.max_iter):
-            cur_weight = self.weights
-            f = X.dot(self.weights)
-            err = f - y
-            grad = 2 * X.T.dot(err) / n_samples
-
-            if self.l1 > 0:
-                grad += self.l1 * np.sign(self.weights)
-            if self.l2 > 0:
-                grad += 2 * self.l2 * self.weights
-
-            self.weights = self.weights - self.learning_rate * grad # Antigradient
-
-            if self.verbose:
-                mse = self.mean_squared_error(y, f)
-                print(f"Iteration {step + 1}/{self.max_iter}, MSE: {mse:.4f}")
-
-            if np.linalg.norm(cur_weight - self.weights) <= self.tolerance:
-                break
-
-    def predict(self, X: np.ndarray) -> np.ndarray:
+    def threshold(self, probabilities: np.ndarray) -> np.ndarray:
         """
-        Predict using the linear model.
+        No thresholding for linear regression, return the raw predictions.
         """
-        n_samples = X.shape[0]
-        X = np.column_stack([np.ones((n_samples)), X])
-        return X.dot(self.weights)  # \hat{y} = X * w
+        return probabilities
+
+    def loss(self, y_true: np.ndarray, y_pred: np.ndarray) -> float:
+        """
+        Mean Squared Error loss for linear regression.
+        """
+        return np.mean((y_true - y_pred) ** 2)

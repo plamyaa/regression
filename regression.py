@@ -15,45 +15,62 @@ class Regression(ABC):
         self.verbose = verbose
 
     @abstractmethod
-    def fit(self, X: np.ndarray, y: np.ndarray) -> None:
+    def activation(self, z: np.ndarray) -> np.ndarray:
+        """
+        Abstract method for applying the activation function (linear or
+        sigmoid).
+        """
         pass
 
     @abstractmethod
-    def predict(self, X: np.ndarray) -> np.ndarray:
+    def loss(self, y_true: np.ndarray) -> np.ndarray:
+        """
+        Abstract method for calculating the loss (MSE or log-loss).
+        """
         pass
 
-    def mean_squared_error(self, y: np.ndarray, y_pred: np.ndarray) -> float:
+    @abstractmethod
+    def threshold(self, probabilities: np.ndarray) -> np.ndarray:
         """
-        Calculate the Mean Squared Error (MSE).
+        Abstract method for thresholding the output (used only in
+        classification).
         """
-        return np.mean((y - y_pred) ** 2)
-    
-    def root_mean_squared_error(self, y: np.ndarray,
-                                y_pred: np.ndarray) -> float:
-        """
-         Calculate the Root Mean Squared Error (RMSE).
-        """
-        return np.sqrt(np.mean((y - y_pred) ** 2))
-    
-    def mean_absolute_error(self, y: np.ndarray, y_pred: np.ndarray) -> float:
-        """
-        Calculate the Mean Absolute Error (MAE).
-        """
-        return np.mean(np.abs(y - y_pred))
+        pass
 
-    def mean_aboslute_percentage_error(self, y: np.ndarray,
-                                       y_pred: np.ndarray) -> float:
+    def fit(self, X: np.ndarray, y: np.ndarray) -> None:
         """
-        Calculate the Mean Absolute Percentage Error (MAPE)
+        Fit the regression model to the training data.
         """
-        return np.mean(np.abs((y - y_pred) / y)) * 100
+        n_samples, n_features = np.shape(X)
+        X = np.column_stack([np.ones((n_samples)), X])
+        self.weights = np.zeros(n_features + 1)
 
-    def r_squared(self, y: np.ndarray, y_pred: np.ndarray) -> float:
+        for step in range(self.max_iter):
+            cur_weight = self.weights
+            z = X.dot(self.weights)
+            f = self.activation(z)
+            err = f - y
+            grad = X.T.dot(err) / n_samples
+
+            if self.l1 > 0:
+                grad += self.l1 * np.sign(self.weights)
+            if self.l2 > 0:
+                grad += 2 * self.l2 * self.weights
+
+            self.weights = self.weights - self.learning_rate * grad
+
+            if self.verbose:
+                loss = self.loss(y, f)
+                print(f"Iteration {step + 1}/{self.max_iter}, Loss: {loss:.4f}")
+
+            if np.linalg.norm(cur_weight - self.weights) <= self.tolerance:
+                break
+
+    def predict(self, X: np.ndarray) -> np.ndarray:
         """
-        Calculate the R-squared (coefficient of determination)
+        Common prediction logic
         """
-        redisual_variance = np.sum((y - y_pred) ** 2)
-        total_variance = np.sum((y - np.mean(y_pred)) ** 2)
-        return (1 - (redisual_variance / total_variance) 
-                if total_variance != 0 
-                else 0)
+        n_samples = X.shape[0]
+        X = np.column_stack([np.ones((n_samples)), X])
+        probabilities = self.activation(X.dot(self.weights))
+        return self.threshold(probabilities)
